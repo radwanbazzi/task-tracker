@@ -1,10 +1,11 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from app import storage
 from app.business_rules import validate_status_transition
 from app.models import TaskCreate, TaskPriority, TaskResponse, TaskStatus, TaskUpdate
+from app.task_rules import build_task_response
 
 app = FastAPI(
     title="Task Tracker API",
@@ -29,20 +30,31 @@ def health_check() -> dict[str, str]:
 
 
 @app.get("/tasks", response_model=list[TaskResponse], tags=["tasks"])
-def list_tasks(status: TaskStatus | None = None, priority: TaskPriority | None = None) -> list[TaskResponse]:
-    return storage.get_all_tasks(status=status, priority=priority)
+def list_tasks(
+    status: TaskStatus | None = None,
+    priority: TaskPriority | None = None,
+    overdue: bool | None = None,
+) -> list[TaskResponse]:
+    today = date.today()
+    tasks = storage.get_all_tasks(status=status, priority=priority)
+    task_responses = [build_task_response(task, today=today) for task in tasks]
+    if overdue is not None:
+        task_responses = [task for task in task_responses if task.is_overdue is overdue]
+    return task_responses
 
 
 @app.post("/tasks", response_model=TaskResponse, status_code=status.HTTP_201_CREATED, tags=["tasks"])
 def create_task(payload: TaskCreate) -> TaskResponse:
-    return storage.add_task(payload)
+    today = date.today()
+    return build_task_response(storage.add_task(payload), today=today)
 
 
 @app.get("/tasks/{task_id}", response_model=TaskResponse, tags=["tasks"])
 def get_task(task_id: str) -> TaskResponse:
+    today = date.today()
     task = storage.get_task_by_id(task_id)
     if task is not None:
-        return task
+        return build_task_response(task, today=today)
     raise HTTPException(status_code=404, detail="Task not found")
 
 
@@ -57,7 +69,8 @@ def update_task(task_id: str, payload: TaskUpdate) -> TaskResponse:
 
     updated_task = storage.update_task(task_id, payload)
     if updated_task is not None:
-        return updated_task
+        today = date.today()
+        return build_task_response(updated_task, today=today)
     raise HTTPException(status_code=404, detail="Task not found")
 
 
