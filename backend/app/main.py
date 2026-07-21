@@ -4,7 +4,15 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from app import storage
 from app.business_rules import validate_status_transition
-from app.models import TaskCreate, TaskPriority, TaskResponse, TaskStatus, TaskUpdate
+from app.models import (
+    CommentCreate,
+    CommentResponse,
+    TaskCreate,
+    TaskPriority,
+    TaskResponse,
+    TaskStatus,
+    TaskUpdate,
+)
 from app.task_rules import build_task_response
 
 app = FastAPI(
@@ -37,7 +45,12 @@ def list_tasks(
 ) -> list[TaskResponse]:
     today = date.today()
     tasks = storage.get_all_tasks(status=status, priority=priority)
-    task_responses = [build_task_response(task, today=today) for task in tasks]
+    task_responses = [
+        build_task_response(
+            task, today=today, comment_count=storage.count_comments_for_task(task.id)
+        )
+        for task in tasks
+    ]
     if overdue is not None:
         task_responses = [task for task in task_responses if task.is_overdue is overdue]
     return task_responses
@@ -46,7 +59,10 @@ def list_tasks(
 @app.post("/tasks", response_model=TaskResponse, status_code=status.HTTP_201_CREATED, tags=["tasks"])
 def create_task(payload: TaskCreate) -> TaskResponse:
     today = date.today()
-    return build_task_response(storage.add_task(payload), today=today)
+    task = storage.add_task(payload)
+    return build_task_response(
+        task, today=today, comment_count=storage.count_comments_for_task(task.id)
+    )
 
 
 @app.get("/tasks/{task_id}", response_model=TaskResponse, tags=["tasks"])
@@ -54,7 +70,9 @@ def get_task(task_id: str) -> TaskResponse:
     today = date.today()
     task = storage.get_task_by_id(task_id)
     if task is not None:
-        return build_task_response(task, today=today)
+        return build_task_response(
+            task, today=today, comment_count=storage.count_comments_for_task(task_id)
+        )
     raise HTTPException(status_code=404, detail="Task not found")
 
 
@@ -70,7 +88,11 @@ def update_task(task_id: str, payload: TaskUpdate) -> TaskResponse:
     updated_task = storage.update_task(task_id, payload)
     if updated_task is not None:
         today = date.today()
-        return build_task_response(updated_task, today=today)
+        return build_task_response(
+            updated_task,
+            today=today,
+            comment_count=storage.count_comments_for_task(task_id),
+        )
     raise HTTPException(status_code=404, detail="Task not found")
 
 
@@ -79,3 +101,39 @@ def delete_task(task_id: str) -> None:
     if storage.delete_task(task_id):
         return None
     raise HTTPException(status_code=404, detail="Task not found")
+
+
+@app.post(
+    "/tasks/{task_id}/comments",
+    response_model=CommentResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["comments"],
+)
+def create_comment(task_id: str, payload: CommentCreate) -> CommentResponse:
+    if storage.get_task_by_id(task_id) is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return storage.add_comment(task_id, payload)
+
+
+@app.get(
+    "/tasks/{task_id}/comments",
+    response_model=list[CommentResponse],
+    tags=["comments"],
+)
+def list_comments(task_id: str) -> list[CommentResponse]:
+    if storage.get_task_by_id(task_id) is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return storage.get_comments_for_task(task_id)
+
+
+@app.delete(
+    "/tasks/{task_id}/comments/{comment_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["comments"],
+)
+def delete_comment(task_id: str, comment_id: str) -> None:
+    if storage.get_task_by_id(task_id) is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if storage.delete_comment(task_id, comment_id):
+        return None
+    raise HTTPException(status_code=404, detail="Comment not found")
