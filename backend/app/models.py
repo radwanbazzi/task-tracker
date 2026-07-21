@@ -98,5 +98,45 @@ class TaskResponse(BaseModel):
     assignee: Optional[str]
     due_date: Optional[date] = None
     is_overdue: bool = False
+    comment_count: int = 0
     created_at: datetime
     updated_at: datetime
+
+
+class CommentCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    text: str
+    author: Optional[str] = None
+
+    @field_validator("text")
+    @classmethod
+    def _validate_text(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Comment text is required and cannot be blank")
+        if len(v) > 1000:
+            raise ValueError("Comment text must not exceed 1000 characters")
+        return v
+
+    @field_validator("author", mode="before")
+    @classmethod
+    def _normalize_author(cls, v):
+        if v is None:
+            return None
+        v = v.strip()
+        if not v:
+            return None
+        if len(v) > 50:
+            raise ValueError("Author must not exceed 50 characters")
+        return v
+
+
+class CommentResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    task_id: str
+    text: str
+    author: Optional[str]
+    created_at: datetime
