@@ -134,6 +134,7 @@
         padding: 18px;
         box-shadow: var(--shadow);
         transition: transform 150ms ease, box-shadow 150ms ease;
+        min-width: 0;
       }
 
       .task-card:hover {
@@ -154,12 +155,22 @@
       .task-card h3 {
         margin: 0 0 10px 0;
         font-size: 1.05rem;
+        overflow-wrap: anywhere;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
       }
 
       .task-description {
         margin: 0 0 14px 0;
         color: var(--muted);
         line-height: 1.6;
+        overflow-wrap: anywhere;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
       }
 
       .task-meta {
@@ -179,14 +190,43 @@
         min-width: 72px;
         padding: 6px 10px;
         border-radius: 999px;
-        background: #fef3c7;
-        color: #7c2d12;
         font-weight: 700;
         letter-spacing: 0.01em;
       }
 
+      .priority-high {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      .priority-medium {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .priority-low {
+        background: #dcfce7;
+        color: #166534;
+      }
+
       .assignee {
         color: var(--muted);
+      }
+
+      .due-date {
+        color: var(--muted);
+      }
+
+      .overdue-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #b91c1c;
+        color: #ffffff;
+        font-weight: 700;
+        letter-spacing: 0.01em;
       }
 
       .edit-btn {
@@ -300,6 +340,12 @@
         font-weight: 700;
       }
 
+      .char-counter {
+        align-self: flex-end;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
       .form-field input,
       .form-field textarea,
       .form-field select {
@@ -338,6 +384,79 @@
         color: var(--text);
         cursor: pointer;
         font-weight: 700;
+      }
+
+      #commentsSection {
+        margin-top: 24px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border);
+      }
+
+      #commentsSection h3 {
+        margin: 0 0 14px;
+        font-size: 1rem;
+      }
+
+      #commentForm {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      #commentForm input,
+      #commentForm textarea {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 12px;
+        font: inherit;
+        color: var(--text);
+        background: #f8fafc;
+      }
+
+      #commentForm textarea {
+        min-height: 72px;
+        resize: vertical;
+      }
+
+      .comment-item {
+        border: 1px solid rgba(203, 213, 225, 0.9);
+        border-radius: 14px;
+        padding: 12px 14px;
+        margin-bottom: 10px;
+        background: #f8fafc;
+      }
+
+      .comment-text {
+        margin: 0 0 8px;
+        line-height: 1.5;
+      }
+
+      .comment-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .comment-delete-btn {
+        border: none;
+        border-radius: 10px;
+        padding: 4px 10px;
+        background: rgba(220, 38, 38, 0.1);
+        color: #b91c1c;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      .comment-delete-btn:hover {
+        background: rgba(220, 38, 38, 0.18);
+      }
+
+      .comment-count {
+        color: var(--muted);
       }
 
       @media (max-width: 560px) {
@@ -436,6 +555,10 @@
             <p>Organize work from planning to completion in a simple Kanban view.</p>
           </div>
           <button class="new-task-btn" type="button" id="newTaskBtn">New Task</button>
+          <label>
+            <input type="checkbox" id="overdueFilter" />
+            Show overdue only
+          </label>
         </div>
       </header>
 
@@ -488,10 +611,12 @@
           <div class="form-field">
             <label for="taskTitle">Title</label>
             <input id="taskTitle" name="title" type="text" maxlength="200" />
+            <span class="char-counter" id="taskTitleCounter">0 / 200</span>
           </div>
           <div class="form-field">
             <label for="taskDescription">Description</label>
-            <textarea id="taskDescription" name="description"></textarea>
+            <textarea id="taskDescription" name="description" maxlength="2000"></textarea>
+            <span class="char-counter" id="taskDescriptionCounter">0 / 2000</span>
           </div>
           <div class="form-row">
             <div class="form-field">
@@ -513,13 +638,27 @@
           </div>
           <div class="form-field">
             <label for="taskAssignee">Assignee</label>
-            <input id="taskAssignee" name="assignee" type="text" />
+            <input id="taskAssignee" name="assignee" type="text" maxlength="50" />
+            <span class="char-counter" id="taskAssigneeCounter">0 / 50</span>
+          </div>
+          <div class="form-field">
+            <label for="taskDueDate">Due date</label>
+            <input id="taskDueDate" name="due_date" type="date" />
           </div>
           <div class="modal-actions">
             <button class="cancel-btn" type="button" id="modalCancelBtn">Cancel</button>
             <button class="edit-btn" type="submit" id="taskSubmitBtn">Create Task</button>
           </div>
         </form>
+        <section id="commentsSection">
+          <h3>Comments</h3>
+          <div id="commentsList"></div>
+          <form id="commentForm">
+            <input id="commentAuthor" type="text" placeholder="Your name (optional)">
+            <textarea id="commentText" required></textarea>
+            <button class="edit-btn" type="submit">Add Comment</button>
+          </form>
+        </section>
       </section>
     </div>
 
@@ -536,8 +675,15 @@
         return div.innerHTML;
       }
 
-      async function fetchTasks() {
-        const response = await fetch(`${BACKEND_URL}/tasks`);
+      function updateCharCounter(inputId, counterId) {
+        const input = document.getElementById(inputId);
+        const counter = document.getElementById(counterId);
+        counter.textContent = `${input.value.length} / ${input.maxLength}`;
+      }
+
+      async function fetchTasks(overdueOnly = false) {
+        const url = overdueOnly ? `${BACKEND_URL}/tasks?overdue=true` : `${BACKEND_URL}/tasks`;
+        const response = await fetch(url);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -594,8 +740,11 @@
                 <h3>${escapeHtml(task.title)}</h3>
                 <p class="task-description">${escapeHtml(task.description)}</p>
                 <div class="task-meta">
-                  <span class="priority">${escapeHtml(task.priority)}</span>
+                  <span class="priority priority-${escapeHtml(task.priority.toLowerCase())}">${escapeHtml(task.priority)}</span>
                   <span class="assignee">${escapeHtml(task.assignee)}</span>
+                  ${task.due_date ? `<span class="due-date">${escapeHtml(task.due_date)}</span>` : ''}
+                  ${task.is_overdue ? `<span class="overdue-pill">Overdue</span>` : ''}
+                  ${task.comment_count > 0 ? `<span class="comment-count">${task.comment_count} comment${task.comment_count === 1 ? '' : 's'}</span>` : ''}
                 </div>
                 <button class="edit-btn" type="button">Edit</button>
               `;
@@ -653,6 +802,7 @@
         document.getElementById('taskSubmitBtn').textContent = 'Create Task';
         editingTask = null;
         clearTaskFormError();
+        document.getElementById('commentsSection').style.display = 'none';
         const modal = document.getElementById('taskModal');
         modal.classList.add('active');
         modal.setAttribute('aria-hidden', 'false');
@@ -666,10 +816,15 @@
         document.getElementById('taskStatus').value = task.status;
         document.getElementById('taskPriority').value = task.priority;
         document.getElementById('taskAssignee').value = task.assignee || '';
+        document.getElementById('taskDueDate').value = task.due_date || '';
         document.getElementById('taskModalTitle').textContent = 'Edit Task';
         document.getElementById('taskSubmitBtn').textContent = 'Save Changes';
         editingTask = { ...task };
         clearTaskFormError();
+        document.getElementById('commentsSection').style.display = '';
+        document.getElementById('commentText').value = '';
+        document.getElementById('commentAuthor').value = '';
+        loadComments(task.id);
         const modal = document.getElementById('taskModal');
         modal.classList.add('active');
         modal.setAttribute('aria-hidden', 'false');
@@ -693,12 +848,14 @@
       function formValues() {
         const title = document.getElementById('taskTitle').value.trim();
         const assignee = document.getElementById('taskAssignee').value.trim();
+        const dueDate = document.getElementById('taskDueDate').value.trim();
         return {
           title,
           description: document.getElementById('taskDescription').value,
           status: document.getElementById('taskStatus').value,
           priority: document.getElementById('taskPriority').value,
           assignee: assignee || null,
+          due_date: dueDate || null,
         };
       }
 
@@ -826,11 +983,86 @@
         await patchTaskStatus(taskId, targetStatus, previousStatus);
       }
 
+      async function loadComments(taskId) {
+        const list = document.getElementById('commentsList');
+        try {
+          const response = await fetch(`${BACKEND_URL}/tasks/${taskId}/comments`);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const comments = await response.json();
+          list.innerHTML = comments.map((comment) => {
+            const author = comment.author ? escapeHtml(comment.author) : 'Anonymous';
+            return `
+              <div class="comment-item">
+                <p class="comment-text">${escapeHtml(comment.text)}</p>
+                <div class="comment-meta">
+                  <span class="comment-author">${author}</span>
+                  <span class="comment-date">${escapeHtml(comment.created_at)}</span>
+                  <button class="comment-delete-btn" type="button" data-id="${escapeHtml(String(comment.id))}">Delete</button>
+                </div>
+              </div>
+            `;
+          }).join('');
+          list.querySelectorAll('.comment-delete-btn').forEach((btn) => {
+            btn.addEventListener('click', () => handleDeleteComment(taskId, btn.dataset.id));
+          });
+        } catch (error) {
+          console.error("Failed to load comments:", error);
+        }
+      }
+
+      async function handleAddComment(event) {
+        event.preventDefault();
+        const taskId = document.getElementById('taskId').value;
+        const author = document.getElementById('commentAuthor').value.trim();
+        const text = document.getElementById('commentText').value;
+
+        try {
+          const response = await fetch(`${BACKEND_URL}/tasks/${taskId}/comments`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, author: author || null }),
+          });
+
+          if (!response.ok) {
+            showTaskFormError(await getResponseMessage(response));
+            return;
+          }
+
+          clearTaskFormError();
+          document.getElementById('commentForm').reset();
+          await loadComments(taskId);
+          await loadAndRender();
+        } catch (error) {
+          showTaskFormError(`Network error while adding comment: ${error.message}`);
+        }
+      }
+
+      async function handleDeleteComment(taskId, commentId) {
+        try {
+          const response = await fetch(`${BACKEND_URL}/tasks/${taskId}/comments/${commentId}`, {
+            method: 'DELETE',
+          });
+
+          if (!response.ok) {
+            showTaskFormError(await getResponseMessage(response));
+            return;
+          }
+
+          clearTaskFormError();
+          await loadComments(taskId);
+          await loadAndRender();
+        } catch (error) {
+          showTaskFormError(`Network error while deleting comment: ${error.message}`);
+        }
+      }
+
       async function loadAndRender() {
         setState('loading');
 
         try {
-          tasks = await fetchTasks();
+          tasks = await fetchTasks(document.getElementById('overdueFilter').checked);
           setState('ready');
           renderBoard(tasks);
         } catch (error) {
@@ -853,9 +1085,14 @@
         loadAndRender();
         document.getElementById('retryBtn').addEventListener('click', loadAndRender);
         document.getElementById('newTaskBtn').addEventListener('click', openCreateModal);
+        document.getElementById('overdueFilter').addEventListener('change', loadAndRender);
         document.getElementById('modalCancelBtn').addEventListener('click', closeTaskModal);
         document.getElementById('modalCloseBtn').addEventListener('click', closeTaskModal);
         document.getElementById('taskForm').addEventListener('submit', handleTaskFormSubmit);
+        document.getElementById('commentForm').addEventListener('submit', handleAddComment);
+        document.getElementById('taskTitle').addEventListener('input', () => updateCharCounter('taskTitle', 'taskTitleCounter'));
+        document.getElementById('taskAssignee').addEventListener('input', () => updateCharCounter('taskAssignee', 'taskAssigneeCounter'));
+        document.getElementById('taskDescription').addEventListener('input', () => updateCharCounter('taskDescription', 'taskDescriptionCounter'));
         document.getElementById('taskModal').addEventListener('click', (event) => {
           if (event.target === event.currentTarget) closeTaskModal();
         });
