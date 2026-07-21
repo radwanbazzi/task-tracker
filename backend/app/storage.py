@@ -20,6 +20,7 @@ def add_task(payload: TaskCreate) -> TaskResponse:
         status=payload.status,
         priority=payload.priority,
         assignee=payload.assignee,
+        due_date=payload.due_date,
         created_at=now,
         updated_at=now,
     )
@@ -58,7 +59,7 @@ def update_task(task_id: str, payload: TaskUpdate) -> Optional[TaskResponse]:
     updated = existing.model_copy(deep=True)
     for key, value in changes.items():
         # only set known editable fields
-        if key in {"title", "description", "status", "priority", "assignee"}:
+        if key in {"title", "description", "status", "priority", "assignee", "due_date"}:
             setattr(updated, key, value)
     updated.updated_at = datetime.now(timezone.utc)
     _tasks[task_id] = updated
