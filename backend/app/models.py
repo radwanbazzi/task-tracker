@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from enum import Enum
 from typing import Optional
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
@@ -27,6 +27,18 @@ class TaskCreate(BaseModel):
     status: TaskStatus = TaskStatus.TODO
     priority: TaskPriority = TaskPriority.MEDIUM
     assignee: Optional[str] = None
+    due_date: Optional[date] = None
+
+    @field_validator("due_date", mode="before")
+    @classmethod
+    def _normalize_due_date(cls, v):
+        if isinstance(v, str) and not v.strip():
+            return None
+        if isinstance(v, bool):
+            raise ValueError("due_date must be a valid date")
+        if isinstance(v, int):
+            raise ValueError("due_date must be a valid date")
+        return v
 
     @field_validator("title")
     @classmethod
@@ -49,6 +61,18 @@ class TaskUpdate(BaseModel):
     status: Optional[TaskStatus] = None
     priority: Optional[TaskPriority] = None
     assignee: Optional[str] = None
+    due_date: Optional[date] = None
+
+    @field_validator("due_date", mode="before")
+    @classmethod
+    def _normalize_due_date(cls, v):
+        if isinstance(v, str) and not v.strip():
+            return None
+        if isinstance(v, bool):
+            raise ValueError("due_date must be a valid date")
+        if isinstance(v, int):
+            raise ValueError("due_date must be a valid date")
+        return v
 
     @field_validator("title")
     @classmethod
@@ -72,5 +96,7 @@ class TaskResponse(BaseModel):
     status: TaskStatus
     priority: TaskPriority
     assignee: Optional[str]
+    due_date: Optional[date] = None
+    is_overdue: bool = False
     created_at: datetime
     updated_at: datetime
