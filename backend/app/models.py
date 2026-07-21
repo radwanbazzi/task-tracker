@@ -7,6 +7,45 @@ from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict, field_validator
 
 
+def _normalize_due_date_value(v):
+    if isinstance(v, str) and not v.strip():
+        return None
+    if isinstance(v, bool):
+        raise ValueError("due_date must be a valid date")
+    if isinstance(v, int):
+        raise ValueError("due_date must be a valid date")
+    return v
+
+
+def _validate_title_text(v: str) -> str:
+    v = v.strip()
+    if not v:
+        raise ValueError("Title is required and cannot be blank")
+    if len(v) > 200:
+        raise ValueError("Title must not exceed 200 characters")
+    return v
+
+
+def _validate_comment_text_value(v: str) -> str:
+    v = v.strip()
+    if not v:
+        raise ValueError("Comment text is required and cannot be blank")
+    if len(v) > 1000:
+        raise ValueError("Comment text must not exceed 1000 characters")
+    return v
+
+
+def _normalize_comment_author_value(v):
+    if v is None:
+        return None
+    v = v.strip()
+    if not v:
+        return None
+    if len(v) > 50:
+        raise ValueError("Author must not exceed 50 characters")
+    return v
+
+
 class TaskStatus(str, Enum):
     TODO = "ToDo"
     IN_PROGRESS = "InProgress"
@@ -32,25 +71,14 @@ class TaskCreate(BaseModel):
     @field_validator("due_date", mode="before")
     @classmethod
     def _normalize_due_date(cls, v):
-        if isinstance(v, str) and not v.strip():
-            return None
-        if isinstance(v, bool):
-            raise ValueError("due_date must be a valid date")
-        if isinstance(v, int):
-            raise ValueError("due_date must be a valid date")
-        return v
+        return _normalize_due_date_value(v)
 
     @field_validator("title")
     @classmethod
     def _validate_title(cls, v: str) -> str:
         if v is None:
             raise ValueError("Title is required and cannot be blank")
-        v = v.strip()
-        if not v:
-            raise ValueError("Title is required and cannot be blank")
-        if len(v) > 200:
-            raise ValueError("Title must not exceed 200 characters")
-        return v
+        return _validate_title_text(v)
 
 
 class TaskUpdate(BaseModel):
@@ -66,25 +94,14 @@ class TaskUpdate(BaseModel):
     @field_validator("due_date", mode="before")
     @classmethod
     def _normalize_due_date(cls, v):
-        if isinstance(v, str) and not v.strip():
-            return None
-        if isinstance(v, bool):
-            raise ValueError("due_date must be a valid date")
-        if isinstance(v, int):
-            raise ValueError("due_date must be a valid date")
-        return v
+        return _normalize_due_date_value(v)
 
     @field_validator("title")
     @classmethod
     def _validate_title_if_provided(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return None
-        v = v.strip()
-        if not v:
-            raise ValueError("Title is required and cannot be blank")
-        if len(v) > 200:
-            raise ValueError("Title must not exceed 200 characters")
-        return v
+        return _validate_title_text(v)
 
 
 class TaskResponse(BaseModel):
@@ -112,24 +129,12 @@ class CommentCreate(BaseModel):
     @field_validator("text")
     @classmethod
     def _validate_text(cls, v: str) -> str:
-        v = v.strip()
-        if not v:
-            raise ValueError("Comment text is required and cannot be blank")
-        if len(v) > 1000:
-            raise ValueError("Comment text must not exceed 1000 characters")
-        return v
+        return _validate_comment_text_value(v)
 
     @field_validator("author", mode="before")
     @classmethod
     def _normalize_author(cls, v):
-        if v is None:
-            return None
-        v = v.strip()
-        if not v:
-            return None
-        if len(v) > 50:
-            raise ValueError("Author must not exceed 50 characters")
-        return v
+        return _normalize_comment_author_value(v)
 
 
 class CommentResponse(BaseModel):
