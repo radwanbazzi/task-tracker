@@ -1,0 +1,36 @@
+# Secrets
+.env
+
+# Version control
+.git
+.github
+
+# Virtual environments
+venv/
+.venv/
+backend/venv/
+env/
+
+# Python cache
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Test cache
+.pytest_cache/
+**/.pytest_cache/
+
+# Node (not currently present, kept for safety)
+node_modules/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Editor / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
