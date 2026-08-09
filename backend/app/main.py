@@ -17,8 +17,8 @@ from app.task_rules import build_task_response
 
 app = FastAPI(
     title="Task Tracker API",
-    description="Minimal REST API skeleton for the Module 1 Task Tracker learning project.",
-    version="0.1.0",
+    description="REST API for the Task Tracker app, built across Modules 1-4 of the AUB AI-Assisted Coding programme (task CRUD, due dates, comments) plus a Dockerfile and CI workflow added for Module 4.",
+    version="0.4.0",
 )
 
 app.add_middleware(

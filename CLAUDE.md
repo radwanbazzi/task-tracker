@@ -105,3 +105,5 @@ Do not do any of the following without asking first:
 - Add a database or any persistence layer (current storage is intentionally in-memory).
 - Add deployment steps, Docker, or CI/CD configuration.
 - Make major UI changes (layout, framework adoption, redesign) beyond small, scoped fixes.
+
+**Exception on record:** the GitHub Actions pytest workflow (`.github/workflows/ci.yml`, commit `36b84a9`) and the multi-stage backend `Dockerfile`/`.dockerignore` (commit `462e7a8`) were explicitly approved by the user for this Module 4 branch, outside the sessions captured in `docs/midcourse/prompt-log.md`.

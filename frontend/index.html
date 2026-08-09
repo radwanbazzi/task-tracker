@@ -817,6 +817,9 @@
         document.getElementById('taskPriority').value = task.priority;
         document.getElementById('taskAssignee').value = task.assignee || '';
         document.getElementById('taskDueDate').value = task.due_date || '';
+        updateCharCounter('taskTitle', 'taskTitleCounter');
+        updateCharCounter('taskAssignee', 'taskAssigneeCounter');
+        updateCharCounter('taskDescription', 'taskDescriptionCounter');
         document.getElementById('taskModalTitle').textContent = 'Edit Task';
         document.getElementById('taskSubmitBtn').textContent = 'Save Changes';
         editingTask = { ...task };
