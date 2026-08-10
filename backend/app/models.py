@@ -38,6 +38,8 @@ def _validate_comment_text_value(v: str) -> str:
 def _normalize_comment_author_value(v):
     if v is None:
         return None
+    if not isinstance(v, str):
+        raise ValueError("Author must be a string")
     v = v.strip()
     if not v:
         return None
