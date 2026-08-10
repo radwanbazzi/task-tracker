@@ -123,7 +123,7 @@ docker run --rm -p 8000:8000 task-tracker-backend
 
 The API is then available at the same [http://127.0.0.1:8000](http://127.0.0.1:8000), with `/docs` and `/health` working as above. The container has no volume mount, so — same as running locally — all data is lost when the container stops.
 
-To use the frontend against the Dockerized backend, run the frontend server from [Run the app locally](#4-run-the-app-locally) in a separate terminal; CORS is wide open (`allow_origins=["*"]`) so this works without extra configuration.
+To use the frontend against the Dockerized backend, run the frontend server from [Run the app locally](#4-run-the-app-locally) in a separate terminal. CORS permits the supported local frontend origins `http://localhost:5500` and `http://127.0.0.1:5500`.
 
 `[VERIFY]` The CI workflow (below) does not build or run this Docker image — only `docker build`/`docker run`, tried locally, confirm the image works.
 
@@ -175,15 +175,17 @@ task-tracker/
 - `is_overdue` and `comment_count` are **derived**, never stored, and rejected on input: `TaskCreate`/`TaskUpdate`/`CommentCreate` all use Pydantic's `extra="forbid"`, so sending either field returns 422.
 - Status transitions are restricted to `ToDo → InProgress`, `InProgress → Done`, and `Done → InProgress` (`app/business_rules.py`); any other transition returns 422 with the allowed transitions listed in the response.
 - Title must be non-blank and ≤200 chars; comment text must be non-blank and ≤1000 chars; comment author, if provided, must be ≤50 chars after trimming (blank becomes `None`).
+- Explicit `null` is rejected for task-update `title`, `description`, `status`, and `priority`; omitting those fields still leaves them unchanged.
+- Non-string comment authors are rejected with HTTP 422 instead of causing an internal server error.
 
 **Current limitations**
 
 - Storage is in memory (both local and Docker); data does not survive a restart
 - `assignee` and `description` have browser-side `maxlength` limits but no backend length validators, so a direct API call can exceed them
-- CORS is set to `allow_origins=["*"]`, which is acceptable for local development only and is not a production configuration
+- CORS allows only `http://localhost:5500` and `http://127.0.0.1:5500`; methods and headers remain unrestricted for local development, so this is not a production configuration
 - No authentication, no database, and no deployment configuration beyond the local-use Dockerfile described in [Run with Docker](#6-run-with-docker) — none of this is production-ready
 - Do not expose the API beyond trusted local development; authentication and authorization are required before any network or production deployment
-- `[VERIFY]` `requirements.txt` pins the test HTTP client as `httpx2>=2.0.0`. This looks like it may be a typo for `httpx`, but that is what the file currently says, so it is reported here as-is rather than corrected
+- `requirements.txt` leaves the test HTTP client open-ended as `httpx2>=2.0.0`. The installed Starlette warning identifies `httpx2` as its expected test-client dependency; splitting runtime/test requirements and locking versions remains backlog work
 
 ## 10. API endpoints
 
@@ -194,7 +196,7 @@ task-tracker/
 | GET | `/tasks` | Optional `status`, `priority`, `overdue` filters (AND) |
 | POST | `/tasks` | 201 on success |
 | GET | `/tasks/{task_id}` | 404 if missing |
-| PATCH | `/tasks/{task_id}` | Partial update; 422 on invalid transition |
+| PATCH | `/tasks/{task_id}` | Partial update; 422 on invalid transition or explicit null for required task fields |
 | DELETE | `/tasks/{task_id}` | 204; also deletes that task's comments |
 | POST | `/tasks/{task_id}/comments` | 201; 404 if task missing |
 | GET | `/tasks/{task_id}/comments` | 200; `[]` if none; 404 if task missing |

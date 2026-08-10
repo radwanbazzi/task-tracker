@@ -22,6 +22,7 @@ Architecture:
 - `backend/tests/`: pytest API and business-rule tests.
 - `frontend/index.html`: complete static frontend using HTML, inline CSS, and vanilla JavaScript.
 - `docs/midcourse/`: user stories, decisions, verification notes, prompt log, and reflection.
+- `docs/security-review.md`: Module 5 security grading, resolution status, and deferred backlog items.
 
 Storage is intentionally in memory. Tasks and comments do not survive an application restart.
 
@@ -39,7 +40,7 @@ Confirmed from `requirements.txt`, `Dockerfile`, `.github/workflows/ci.yml`, and
 - Docker backend image using `python:3.11-slim`.
 - GitHub Actions runs pytest on pushes and pull requests.
 
-Dependency caveat: `requirements.txt` contains `httpx2>=2.0.0`. Whether this is intentional is not confirmed. Do not silently replace it with `httpx`.
+Dependency caveat: `requirements.txt` contains the open-ended test dependency `httpx2>=2.0.0`. The installed Starlette warning identifies `httpx2` as its expected test-client dependency. Do not silently replace it with `httpx`; splitting runtime/test requirements and locking versions remains backlog work.
 
 ## Supported setup, run, and test commands
 
@@ -56,7 +57,7 @@ python -m venv venv
 pip install -r ..\requirements.txt
 ```
 
-The dependency-install result is not confirmed because of the `httpx2` entry noted above.
+A fresh dependency installation is not confirmed. The current environment runs the suite with `httpx2`, but its open-ended version range remains a reproducibility limitation.
 
 ### Backend
 
@@ -87,7 +88,7 @@ From `backend/` with the virtual environment activated:
 pytest -v
 ```
 
-There are 72 statically discovered test functions across the three main test files. A passing runtime result was not confirmed while drafting this file.
+There are 72 test functions across the three main test files. The full suite was last confirmed during the Module 5 security fixes with `pytest -q -p no:cacheprovider`: 72 passed with one Starlette `httpx`/`httpx2` deprecation warning.
 
 Single-file examples:
 
@@ -127,6 +128,7 @@ Sources: `backend/app/models.py`, `backend/app/main.py`, `backend/app/storage.py
 - New tasks default to status `ToDo`, priority `Medium`, an empty description, no assignee, and no due date.
 - A title is required when creating a task. A supplied title is trimmed, cannot be blank, and cannot exceed 200 characters.
 - Task updates are partial: omitted fields remain unchanged.
+- Explicit `null` for task-update `title`, `description`, `status`, or `priority` is rejected with HTTP 422. `assignee` and `due_date` remain nullable.
 - Unknown input fields are rejected with HTTP 422 because input models use `extra="forbid"`.
 - Status, priority, and overdue filters are combined using AND logic.
 - Backend length validation for task descriptions and assignees is not present. The frontend limits them to 2,000 and 50 characters respectively, but those are not API validation rules.
@@ -159,7 +161,7 @@ Sources: `backend/app/models.py`, `backend/app/task_rules.py`, and `backend/test
 Sources: `backend/app/models.py`, `backend/app/storage.py`, and `backend/tests/test_comments.py`.
 
 - Comment text is required, trimmed, non-blank, and at most 1,000 characters.
-- Comment author is optional, trimmed, and at most 50 characters. A blank author becomes `None`.
+- Comment author is optional, trimmed, and at most 50 characters. A blank author becomes `None`; non-string authors are rejected with HTTP 422.
 - Comments are returned in insertion order, oldest first.
 - `comment_count` is derived for task responses and is not accepted as client input.
 - Deleting a task also deletes its comments.
@@ -172,7 +174,8 @@ Sources: `backend/app/storage.py`, `backend/app/main.py`, and `README.md`.
 - Storage uses module-level dictionaries and is not persistent.
 - Tests reset storage before and after every test.
 - There is no authentication or authorization.
-- CORS permits all origins, methods, and headers. This is documented as local-development configuration, not production configuration.
+- CORS permits only `http://localhost:5500` and `http://127.0.0.1:5500`; methods and headers remain unrestricted for local development. This is not production configuration.
+- Do not expose the API beyond trusted local development; authentication and authorization are required before network or production deployment.
 - No database or production deployment configuration is present.
 
 ## Module 5 guardrails

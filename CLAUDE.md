@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Pydantic** v2, 2.13.4 — request/response schemas, `extra="forbid"` on inputs (`requirements.txt`)
 - **Uvicorn** 0.51.0 (`[standard]` extras) — ASGI server (`requirements.txt`)
 - **pytest** 9.1.1 — test runner (`requirements.txt`)
-- **httpx** — used via Starlette's `TestClient` for API tests. `requirements.txt` pins this as `httpx2>=2.0.0` — `[VERIFY]` this looks like it may be a typo for `httpx`, but that is what the file currently says, so it is reported as-is rather than corrected.
+- **httpx2** — used by Starlette's `TestClient` for API tests. `requirements.txt` leaves it open-ended as `httpx2>=2.0.0`; the installed Starlette warning identifies `httpx2` as the expected dependency. Splitting runtime/test requirements and locking versions remains backlog work.
 - **Frontend**: vanilla JavaScript + inline CSS in a single static `index.html` (no framework, no build step)
 
 ## 2. Run command
@@ -66,7 +66,7 @@ Expected result: **72 passed** across all three test files (19 + 26 + 27, per `R
 
 **Data flow for task responses:** `main.py` always calls `build_task_response(task, today=date.today(), comment_count=...)` before returning — never returns a raw stored task, because stored tasks have `is_overdue=False` and `comment_count=0` as defaults.
 
-**Frontend** — `frontend/index.html`: a single static file containing markup, inline CSS, and vanilla JS. Talks to the backend at `http://127.0.0.1:8000` via `fetch`. Must be served from inside `frontend/`, not the repo root (see Section 2).
+**Frontend** — `frontend/index.html`: a single static file containing markup, inline CSS, and vanilla JS. Talks to the backend at `http://localhost:8000` via `fetch`. Must be served from inside `frontend/`, not the repo root (see Section 2).
 
 **Tests** — `backend/tests/`:
 - `conftest.py` — wires an `autouse` fixture that calls `storage._reset()` before and after every test, so no state leaks between tests. Date-sensitive tests compute dates relative to `date.today()` at runtime, not hardcoded values.
@@ -87,7 +87,7 @@ Any other transition raises `HTTPException(422)` with the allowed-transitions li
 
 **Overdue rule** (`app/task_rules.py`, `compute_is_overdue`): a task's `is_overdue` is `True` when `due_date` is set, `due_date < today`, and `status` is not `Done`. This is a derived field computed on every response, never stored.
 
-**Input validation** (`app/models.py`): `TaskCreate`/`TaskUpdate`/`CommentCreate` all use `extra="forbid"`. Title must be non-blank and ≤200 chars; comment text must be non-blank and ≤1000 chars; comment author, if provided, must be ≤50 chars after trimming (blank becomes `None`).
+**Input validation** (`app/models.py`): `TaskCreate`/`TaskUpdate`/`CommentCreate` all use `extra="forbid"`. Title must be non-blank and ≤200 chars; comment text must be non-blank and ≤1000 chars; comment author, if provided, must be a string and ≤50 chars after trimming (blank becomes `None`). Explicit `null` for task-update `title`, `description`, `status`, or `priority` returns 422; omitted fields remain unchanged, while `assignee` and `due_date` remain nullable.
 
 ## 6. UI states and CORS notes
 
@@ -96,7 +96,9 @@ Any other transition raises `HTTPException(422)` with the allowed-transitions li
 - Error state — `#errorMessage` / `#errorText`, shown via `showErrorMessage()` on fetch failures (including non-OK HTTP responses).
 - Empty state — `.empty-placeholder` rendered when a filtered task list is empty.
 
-**CORS** (`app/main.py`): `CORSMiddleware` is configured with `allow_origins=["*"]`, `allow_methods=["*"]`, `allow_headers=["*"]`. Per `README.md`, this is acceptable for local development only and is not a production configuration.
+**CORS** (`app/main.py`): `CORSMiddleware` permits only `http://localhost:5500` and `http://127.0.0.1:5500`; methods and headers remain unrestricted for local development. This is not production configuration.
+
+**Security status**: non-string comment authors and explicit null required task-update fields now return 422. There is still no authentication or authorization, so the API must not be exposed beyond trusted local development. Capacity controls (DOS-01) and dependency separation/locking (DEP-01) remain backlog items; see `docs/security-review.md`.
 
 ## 7. Do-not rules
 
