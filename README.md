@@ -182,6 +182,7 @@ task-tracker/
 - `assignee` and `description` have browser-side `maxlength` limits but no backend length validators, so a direct API call can exceed them
 - CORS is set to `allow_origins=["*"]`, which is acceptable for local development only and is not a production configuration
 - No authentication, no database, and no deployment configuration beyond the local-use Dockerfile described in [Run with Docker](#6-run-with-docker) — none of this is production-ready
+- Do not expose the API beyond trusted local development; authentication and authorization are required before any network or production deployment
 - `[VERIFY]` `requirements.txt` pins the test HTTP client as `httpx2>=2.0.0`. This looks like it may be a typo for `httpx`, but that is what the file currently says, so it is reported here as-is rather than corrected
 
 ## 10. API endpoints
