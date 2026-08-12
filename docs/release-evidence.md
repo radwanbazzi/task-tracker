@@ -131,6 +131,7 @@ The wrapper is load-bearing: `ci.yml` sets `working-directory: backend`, the `Do
 - **Triggers:** `on: push` and `on: pull_request`, unrestricted by branch (`ci.yml:3-5`)
 - **Python version:** `actions/setup-python@v5` with an explicit `python-version: "3.11"` — pinned, not `3.x` and not implicit
 - **Dependency installation:** present and explicit — `python -m pip install --upgrade pip` then `pip install -r requirements.txt`, run from the repository root
+- **Shortcut check:** no continue-on-error / no `|| true` / pytest is not skipped. Verified item by item in the table below.
 
 **Shortcut check** — grep-verified against `.github/workflows/ci.yml` on 2026-08-12:
 
@@ -197,7 +198,7 @@ The wrapper is load-bearing: `ci.yml` sets `working-directory: backend`, the `Do
   ```
 
   `content-length: 62` matches the byte length of the health payload returned by the local run above, confirming the containerised app serves the identical response.
-- **Non-root check:** **Confirmed by reading the Dockerfile.** `Dockerfile:15` creates the user (`RUN useradd --create-home --shell /usr/sbin/nologin app`) and `Dockerfile:24` switches to it (`USER app`) before `EXPOSE`/`CMD`, so the uvicorn process does not run as root. **Confirmed at runtime, not just by reading:** `docker run --rm task-tracker-backend whoami` returned:
+- **Non-root check, if implemented:** **Implemented, and confirmed by reading the Dockerfile.** `Dockerfile:15` creates the user (`RUN useradd --create-home --shell /usr/sbin/nologin app`) and `Dockerfile:24` switches to it (`USER app`) before `EXPOSE`/`CMD`, so the uvicorn process does not run as root. **Confirmed at runtime, not just by reading:** `docker run --rm task-tracker-backend whoami` returned:
 
   ```
   app

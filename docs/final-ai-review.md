@@ -13,6 +13,12 @@
 
 ## AGENTS.md guardrails
 
+- Repo-specific stack and commands included: **yes**
+- Docs-first/read-first guardrail included: **yes**
+- Unexpected app/frontend edits rule included: **yes**
+
+Supporting evidence for each answer, plus two additional guardrails this repository carries:
+
 | Check | Result | Evidence |
 |---|---|---|
 | Repo-specific stack and commands included | **Yes** | `AGENTS.md:29-118` — pinned versions (FastAPI 0.139.0, Pydantic 2.13.4, Uvicorn 0.51.0, pytest 9.1.1), plus the exact `uvicorn app.main:app --reload --port 8000`, `python -m http.server 5500`, `pytest -v`, and `docker build`/`docker run` commands. |
