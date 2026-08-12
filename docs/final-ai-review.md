@@ -5,7 +5,7 @@
 **Branch:** `final-project`
 **Date of this review:** 2026-08-12
 
-**Reviewing tool used for this pass:** Claude (Cowork desktop agent), read-only review of the repository working tree, plus isolated Starlette `TestClient` probes run against `app.main:app`. Earlier Module 5 findings referenced below came from a Codex read-only security audit and are recorded in `docs/security-review.md`.
+**Reviewing tools used:** two independent read-only passes over the same diff — **Claude (Cowork desktop agent)** and **Codex** — both on 2026-08-12, each graded separately below. Every behavioural claim from either tool was verified by me with isolated Starlette `TestClient` probes against `app.main:app` before being graded. Earlier Module 5 findings referenced below came from a Codex read-only security audit and are recorded in `docs/security-review.md`.
 
 **Scope reviewed:** `backend/app/models.py` (changed by commits `44b2e0f` and `772e335`), `backend/app/main.py` (changed by commit `6b6e885`), `frontend/index.html`, `Dockerfile`, `.dockerignore`, `.github/workflows/ci.yml`, `requirements.txt`.
 
@@ -54,7 +54,38 @@ The diff, as recorded by `git show`:
 | 4 | "`TaskUpdate` now has three separate validators touching `title` (`_reject_null_for_required_fields`, `_normalize_due_date`, `_validate_title_if_provided`). Collapse them into one validator for readability." | **Noise** | Style-only, and partly inaccurate — `_normalize_due_date` does not touch `title`. Merging would mix a null-rejection concern with a length/blank concern in one function and make the 422 messages harder to attribute. | Declined. This is application code protected by `AGENTS.md:186`, and the brief forbids changes that are not a bug fix, security fix, or documentation-supported correction. **Not applied.** |
 | 5 | "`TaskResponse` and `CommentResponse` set `model_config = ConfigDict(extra='forbid')`. `extra='forbid'` is an input-validation setting; on a response model the server is the only constructor, so it protects nothing." | **Useful** | Correct and correctly scoped. It is a genuine observation about intent-vs-effect: the real guarantee that clients cannot inject `is_overdue` or `comment_count` comes from `extra="forbid"` on `TaskCreate`/`TaskUpdate` (`models.py:64`, `models.py:87`), not from the response models. | Verified: `tests/test_due_dates.py::test_create_task_with_client_supplied_is_overdue_returns_422` passes and is asserting against the *input* model. Graded Useful as a documentation correction, **not** as a code change — the response-model config is harmless, and removing it would be an unrequested app edit. Logged here rather than acted on. |
 
-**Summary of this pass:** 1 Useful, 2 Noise, 2 Wrong. Both Wrong comments were confidently worded and internally coherent; both were only disproved by executing the code rather than reading it. That is the single clearest lesson from this review.
+**Summary of the Claude pass:** 1 Useful, 2 Noise, 2 Wrong. Both Wrong comments were confidently worded and internally coherent; both were only disproved by executing the code rather than reading it. That is the single clearest lesson from this review.
+
+---
+
+### Second pass — independent Codex review
+
+The table above records a Claude (Cowork) review. To test whether a second, independent tool would reach the same conclusions on the same diff, the identical scope was given to **Codex** on 2026-08-12, under the read-only instruction and the `AGENTS.md` guardrails.
+
+Codex returned 3 comments and explicitly declined to produce more, stating: *"I found no additional runtime defect in the two fixes and did not manufacture further comments."* It confirmed at the end: *"No files were changed, nothing was installed, and no server was started. The final worktree diff was empty."* **The `AGENTS.md` read-only and protected-path guardrails held under test** — `git status` after the run showed no modifications.
+
+Every claim below was independently verified by me before grading. I did not take Codex's "Confirmed" self-labels at face value.
+
+| # | Codex comment | Grade | Reason | Verification or decision |
+|---|---|---|---|---|
+| C1 | "`/openapi.json` describes `title`, `description`, `status` and `priority` as accepting `null`, but a PATCH containing any of them as `null` returns HTTP 422. OpenAPI-generated clients can therefore produce requests the contract says are valid but the runtime rejects." (`backend/app/models.py:89-101`) | **Useful** | Correct, specific, and it identifies something the Claude pass missed entirely. The fields are declared `Optional[...] = None` so Pydantic emits `{"type": "null"}` into the schema, while `_reject_null_for_required_fields` rejects that same value at runtime. The null-rejection fix in commit `772e335` closed a security gap and **introduced** this documentation/runtime divergence as a side effect. | Verified independently. `app.openapi()` returns `{"anyOf": [{"type": "string"}, {"type": "null"}]}` for `title` and `description`, and `anyOf` with `{"type": "null"}` for `status` and `priority`. All four fields returned **422** when PATCHed with `null` — on both a missing task and a real one, confirming body validation fires before the 404 path. **Recorded, not fixed.** Resolving it means changing field declarations in `backend/app/models.py`, which is protected application code and outside the final-project scope; the alternative (relaxing the validator) would reopen VAL-01. Logged as backlog. |
+| C2 | "The comment-author 500→422 correction has no regression coverage. If the guard regresses, the integer reaches `.strip()`, raises `AttributeError`, and the endpoint returns HTTP 500. Existing author coverage at `backend/tests/test_comments.py:38-98` only exercises missing, blank, and oversized strings." | **Useful** | A real and consequential coverage gap. The claim is falsifiable and Codex supplied the grep to falsify it. | Verified independently: searching `backend/tests` for a non-string author literal returns **zero matches**. The only author tests present are `test_add_comment_without_author_stores_null_author` (:38), `test_add_comment_with_whitespace_only_author_stores_null_author` (:47), and `test_add_comment_author_over_50_chars_returns_422` (:90). The ERR-01 fix is therefore genuinely unprotected — it could regress and all 72 tests would still pass. **Recorded as backlog, not fixed.** Adding tests is in scope, but a 72→74 count change would invalidate 20 documented references across 7 files hours before submission, trading a real risk of stale documentation for a hypothetical regression. Recording an honest, evidenced gap is the better call here. |
+| C3 | "The explicit-null correction also has no regression coverage. Without the validator, `storage.update_task()` would include the explicit `None` through `model_dump(exclude_unset=True)`, producing HTTP 200 with a null task field. Existing tests exercise omitted fields and nullable `due_date`, but none exercises explicit null for these four fields." | **Useful** | Same class of gap as C2, on the other security fix, and correctly distinguishes *omitted* from *explicitly null* — the exact distinction the Claude pass's comment #1 got wrong in the opposite direction. | Verified independently: searching `backend/tests` for an explicit `null` on `title`/`description`/`status`/`priority` returns **zero matches**. The only `None` assertions in the suite concern `due_date` (`test_due_dates.py:33, 41, 148, 151`), which is legitimately nullable and a different contract. **Recorded as backlog, not fixed**, for the same documentation-churn reason as C2. |
+
+**Grade totals, Codex pass:** 3 Useful, 0 Noise, 0 Wrong.
+
+### What the two passes together showed
+
+The two tools did not overlap on a single comment, and their failure modes were opposite. The Claude pass produced 5 comments of which 2 were **Wrong** — both confidently reasoned from the model definitions without following the value through the write path or the validator lifecycle. The Codex pass produced 3 comments, all **Useful**, all supplied with a falsifiable proof command, and it declined to pad the list when it ran out of real findings.
+
+Most usefully, Codex's C3 correctly distinguished an *omitted* field from an *explicitly null* one — precisely the distinction the Claude pass's comment #1 inverted. One tool's blind spot was the other tool's finding.
+
+Two conclusions I am taking from this:
+
+1. **A review that stops when it runs out of findings is more trustworthy than one that fills a quota.** Asking for "3-5 comments" invites padding; Codex returned 3 and said so explicitly.
+2. **Requiring a proof command changes the output.** Every Codex comment came with a command that could disprove it, and all three survived. Neither of the Claude pass's Wrong comments could have survived being asked for one up front. That requirement is now part of my review prompt permanently, and is recorded in `docs/ai-playbook.md`.
+
+Verifying independently still mattered. Three of three self-labelled "Confirmed" claims held up here — but that is a result I obtained by checking, not an assumption I was entitled to make.
 
 ---
 

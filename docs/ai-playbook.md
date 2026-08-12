@@ -37,7 +37,9 @@ I came into this course non-technical. Every rule below is here because somethin
 3. **Narrow test, then full suite.** The specific test that covers the change, then `pytest -v` — and I record the actual number (72 passed), not "tests pass."
 4. **Grade every comment, including the bad ones.** The Wrong grades are the most useful thing in `docs/final-ai-review.md`, because they show where the judgement happened.
 5. **Separate the observation from the action.** An AI comment can be *correct* and its suggested fix still wrong for this repo — that happened with the `extra="forbid"` note on response models. I logged the observation and declined the edit.
-6. **Check docs against the running app, not against other docs.** That's how I caught the stale `allow_origins=["*"]` claim in `docs/technical-note.md` and the `/version` docstring still showing `0.1.0` when the API returns `0.4.0`.
+6. **Make the review supply its own disproof.** I ask every AI review for the exact command that would prove each comment wrong, and for a Confirmed-vs-Inference label. Running two tools over the same diff showed why: the pass that had to supply proof commands scored 3 Useful / 0 Wrong, while the pass that did not scored 1 Useful / 2 Wrong. Same code, same diff.
+7. **Ask for "as many as you find," not "3-5."** A quota invites padding. The review that returned 3 comments and said it had nothing more was the more trustworthy one.
+8. **Check docs against the running app, not against other docs.** That's how I caught the stale `allow_origins=["*"]` claim in `docs/technical-note.md` and the `/version` docstring still showing `0.1.0` when the API returns `0.4.0`.
 
 ## What I am still figuring out
 
