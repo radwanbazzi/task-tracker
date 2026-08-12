@@ -125,7 +125,7 @@ The API is then available at the same [http://127.0.0.1:8000](http://127.0.0.1:8
 
 To use the frontend against the Dockerized backend, run the frontend server from [Run the app locally](#4-run-the-app-locally) in a separate terminal. CORS permits the supported local frontend origins `http://localhost:5500` and `http://127.0.0.1:5500`.
 
-`[VERIFY]` The CI workflow (below) does not build or run this Docker image — only `docker build`/`docker run`, tried locally, confirm the image works.
+`[VERIFY]` The CI workflow (below) does not build or run this Docker image — only `docker build`/`docker run`, tried locally, confirm the image works. **Verified 2026-08-12:** the image was built and run locally, `/health` returned HTTP 200 from inside the container, and `docker run --rm task-tracker-backend whoami` returned `app`, confirming the non-root runtime. Full output in `docs/release-evidence.md`.
 
 ## 7. CI workflow summary
 
@@ -214,3 +214,75 @@ All mid-course project documentation lives in
 - [prompt-log.md](https://github.com/radwanbazzi/task-tracker/blob/mid-course-project/docs/midcourse/prompt-log.md) — the AI prompts used, and what was accepted or rejected
 - [verification.md](https://github.com/radwanbazzi/task-tracker/blob/mid-course-project/docs/midcourse/verification.md) — baseline, test results, browser checks, Break Tests
 - [reflection.md](https://github.com/radwanbazzi/task-tracker/blob/mid-course-project/docs/midcourse/reflection.md) — reflection on the AI-assisted workflow
+
+## 12. Final Project
+
+Branch reviewed: `final-project`
+
+### What this submission demonstrates
+
+- The existing Task Tracker still runs inside the intended course scope; no new product feature was added.
+- CI runs the pytest suite on every push and pull request.
+- The Docker image builds and runs, with `/health` returning 200.
+- AI review, security, and ownership evidence is in `docs/`.
+
+### Repository structure note
+
+The final-project brief lists `app/`, `frontend/`, and `tests/` at the repository root. This repo has carried a `backend/` wrapper since Module 1, so the brief's `app/` is `backend/app/` and its `tests/` is `backend/tests/`. The wrapper is load-bearing (`ci.yml` sets `working-directory: backend`, the `Dockerfile` copies `backend/app`, and all imports are rooted at `app.*`), so it is documented rather than relocated. See `docs/release-evidence.md`.
+
+### How to run locally
+
+```powershell
+cd backend
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r ..\requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+
+Frontend, in a second terminal:
+
+```powershell
+cd frontend
+python -m http.server 5500
+```
+
+Open http://127.0.0.1:5500. The API is at http://127.0.0.1:8000 (`/docs`, `/health`, `/version`; there is no route at `/`).
+
+### How to run tests
+
+```powershell
+cd backend
+.\venv\Scripts\activate
+pytest -v
+```
+
+Expected: **72 passed**.
+
+### How to run with Docker
+
+From the repository root:
+
+```powershell
+docker build -t task-tracker-backend .
+docker run --rm -p 8000:8000 task-tracker-backend
+curl.exe -i http://127.0.0.1:8000/health
+```
+
+Expected: HTTP `200` with `{"status":"ok","timestamp":"..."}`.
+
+### Evidence files
+
+- `docs/release-evidence.md` — baseline, CI, Docker, and claim-vs-reality evidence
+- `docs/final-ai-review.md` — AI code review mini-log, security mini-review, manual check, ownership statement
+- `docs/ai-playbook.md` — personal AI playbook and decision card
+- `docs/security-review.md` — Module 5 security grading, carried forward and re-verified
+- `AGENTS.md` — agent guardrails
+
+### AI assistance summary
+
+AI helped draft or review: CI workflow, Dockerfile, test scaffolding, the security review, the code review pass, and documentation.
+
+I verified the work by: running the full `pytest -v` suite (72 passed), probing endpoints directly with Starlette `TestClient` (`/health`, `/version`, CORS preflight, oversized payloads, null and non-string inputs), reviewing each diff with `git show`, building and running the Docker container and checking `/health`, and manually tracing every `innerHTML` sink in `frontend/index.html`.
+
+One AI suggestion I rejected or corrected: an AI review comment claimed commit `772e335` broke `TaskUpdate`'s partial-update contract by rejecting omitted fields. I disproved it by running `PATCH /tasks/{id}` with only `status` set (returned 200) and confirming the two tests that encode that contract still pass. No change was made, and the comment is recorded as **Wrong** in `docs/final-ai-review.md`.

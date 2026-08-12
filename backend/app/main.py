@@ -62,7 +62,7 @@ def get_version() -> dict[str, str]:
 
     Example:
         GET /version -> 200
-        {"version": "0.1.0"}
+        {"version": "0.4.0"}
     """
     return {"version": app.version}
 

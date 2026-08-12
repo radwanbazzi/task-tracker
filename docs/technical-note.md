@@ -30,7 +30,7 @@ Single-file main.py with thin supporting modules is easy to read end-to-end and 
 In-memory storage keeps tests fast and deterministic (storage._reset() around every test) and removes an entire class of infrastructure concerns, but it means the app has zero durability — a container restart or process crash silently discards all data, which is a real limitation being carried forward on purpose, not by accident.
 The Docker image is backend-only, so there is no single command that stands up the whole app; the frontend still needs python -m http.server run separately, which is a bit of a broken story for anyone trying to "just run the app" without already knowing the two-terminal convention from the README.
 CI only runs pytest, not the Docker build — so a change that breaks the Dockerfile (e.g., a bad COPY path) would pass CI and only be caught locally, which is a gap between what's automated and what's actually shipped.
-CORS is wide open (allow_origins=["*"]), which is fine for local dev against the Dockerized backend but is explicitly called out as not a production-safe setting.
+CORS was originally wide open (allow_origins=["*"]). Corrected 2026-08-12: commit 6b6e885 restricted it to ["http://localhost:5500", "http://127.0.0.1:5500"] (backend/app/main.py:26). allow_methods and allow_headers remain ["*"], which is accepted for local development and is still not a production-safe setting.
 
 I would do this differently by including memory that holds the earlier completed tasks even after i close the website or the file, i would add a productivity gauge to see how productive i am being with my tasks, and i would integrate login via a company to see how much are others being productive: what tasks are they on, what is in progress and what's urgent, who's the hardest worker and which department is slacking the most.
 
@@ -47,4 +47,4 @@ Should CI eventually also run docker build (and maybe a smoke-test docker run + 
 Is there any appetite for a docker-compose setup that runs frontend + backend together, or does the two-terminal (uvicorn + python -m http.server) workflow stay the documented approach indefinitely?
 [VERIFY] The requirements.txt httpx2 pin — is this actually a typo, and if so, should it be fixed now or left as-is until it causes a real problem?
 At what point (if ever) does in-memory storage become a blocker for the course's grading/demo needs, and who decides that threshold?
-Does the CORS allow_origins=["*"] setting need tightening even for local-only use, or is it accepted as-is for the remainder of the course?
+[RESOLVED 2026-08-12] The CORS allow_origins wildcard was tightened in commit 6b6e885 to the two local frontend origins. Remaining open question: do allow_methods/allow_headers=["*"] also need tightening for local-only use?
