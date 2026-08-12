@@ -110,7 +110,23 @@ The wrapper is load-bearing: `ci.yml` sets `working-directory: backend`, the `Do
 ## CI evidence
 
 - **Workflow file:** `.github/workflows/ci.yml`
-- **Latest run link or note:** >> RUN THIS << — paste the URL of the green Actions run for the `final-project` branch (Actions tab → latest run → copy the address bar URL).
+- **Latest run link or note:** **Green.** https://github.com/radwanbazzi/task-tracker/actions/runs/31604081371
+
+  - Run: `CI #13` — "docs: add final project release evidence, AI review, and playbook"
+  - Trigger: `push` to `final-project`, 2026-08-12 13:56
+  - Commit: [`b08e4ea`](https://github.com/radwanbazzi/task-tracker/commit/b08e4ea0866a9c5cc9cf32598aa27dab6d146d05)
+  - **Status: Success** — total duration 21s, job `test` 17s
+  - Job log: https://github.com/radwanbazzi/task-tracker/actions/runs/31604081371/job/94138426358
+
+  **One annotation was raised on this run, recorded rather than ignored:**
+
+  > `test` — Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: `actions/checkout@v4`, `actions/setup-python@v5`.
+
+  **Assessment:** a **warning, not a failure**. GitHub transparently ran both actions on Node.js 24 and the job still reported Success, so the pytest suite executed normally. This is a GitHub-runner deprecation affecting the actions' own JavaScript runtime, not this repository's Python code, dependencies, or test outcome — no `requirements.txt` entry and no application file is implicated.
+
+  **Decision: no action before submission.** The fix is a version bump of two third-party actions, which is unrelated to the final project's scope and would require a fresh CI run to re-validate for no grading benefit. Logged as backlog alongside DEP-01.
+
+  **Relation to the CI-01 finding graded Noise in `docs/final-ai-review.md`:** this warning does *not* upgrade CI-01. CI-01 claimed the workflow needed SHA-pinned actions, image scanning, and a hardened deployment gate; the Node 20 notice is a runner-runtime deprecation that GitHub auto-mitigated, and it demonstrates none of those three claims. The grade stands, but the observation is recorded here so the record shows the run was actually read, not just checked for a green tick.
 - **Test command used by CI:** `pytest -v`, with `working-directory: backend` (`ci.yml`, "Run tests" step)
 - **Triggers:** `on: push` and `on: pull_request`, unrestricted by branch (`ci.yml:3-5`)
 - **Python version:** `actions/setup-python@v5` with an explicit `python-version: "3.11"` — pinned, not `3.x` and not implicit
