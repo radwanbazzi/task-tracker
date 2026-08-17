@@ -655,3 +655,25 @@ Both runs must show the same test count and the same result. A refactor that cha
 | Break Test evidence for at least 2 tests | 2 breaks plus 1 diagnosed failed attempt |
 | Behaviour contract re-run after refactor | see section 5 |
 
+
+
+## Revision — reviewer feedback addressed
+
+**Feedback:** "Sending an explicit null value for title in a task update is
+accepted with a 200 response and stores the invalid value."
+
+**Root cause.** `TaskUpdate`'s title validator returned `None` unchanged on an
+explicit null, and the storage layer treats an explicitly-set null as a
+provided value, so it wrote `title = null` and returned 200.
+
+**Why the original tests missed it.** The suite covered blank strings and
+omitted fields but never sent an explicit JSON `null`. That was the coverage
+gap.
+
+**Fix.** Added a `mode="before"` validator on `TaskUpdate` rejecting explicit
+null for title, description, status, and priority with a 422, while assignee
+and due_date stay nullable and omitted fields stay unchanged.
+
+**Regression tests added (7):** explicit-null 422 for each of the four
+required fields, plus three tests proving omitted-field and assignee/due_date
+clearing still behave correctly. Suite is now 79 passed.

@@ -91,6 +91,15 @@ class TaskUpdate(BaseModel):
     assignee: Optional[str] = None
     due_date: Optional[date] = None
 
+    @field_validator("title", "description", "status", "priority", mode="before")
+    @classmethod
+    def _reject_explicit_null(cls, v, info):
+        if v is None:
+            raise ValueError(
+                f"{info.field_name} cannot be null; omit the field to leave it unchanged"
+            )
+        return v
+
     @field_validator("due_date", mode="before")
     @classmethod
     def _normalize_due_date(cls, v):

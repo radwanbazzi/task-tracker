@@ -170,6 +170,77 @@ def test_patch_same_status_returns_422(client, created_task):
     assert task_after.json()["status"] == "ToDo"
 
 
+def test_patch_explicit_null_title_returns_422(client, created_task):
+    task_id = created_task["id"]
+
+    response = client.patch(f"/tasks/{task_id}", json={"title": None})
+
+    assert response.status_code == 422
+
+
+def test_patch_explicit_null_description_returns_422(client, created_task):
+    task_id = created_task["id"]
+
+    response = client.patch(f"/tasks/{task_id}", json={"description": None})
+
+    assert response.status_code == 422
+
+
+def test_patch_explicit_null_status_returns_422(client, created_task):
+    task_id = created_task["id"]
+
+    response = client.patch(f"/tasks/{task_id}", json={"status": None})
+
+    assert response.status_code == 422
+
+
+def test_patch_explicit_null_priority_returns_422(client, created_task):
+    task_id = created_task["id"]
+
+    response = client.patch(f"/tasks/{task_id}", json={"priority": None})
+
+    assert response.status_code == 422
+
+
+def test_patch_omitted_title_leaves_value_unchanged(client, created_task):
+    task_id = created_task["id"]
+    original_title = created_task["title"]
+
+    response = client.patch(f"/tasks/{task_id}", json={"priority": "High"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["title"] == original_title
+    assert body["priority"] == "High"
+
+    task_after = client.get(f"/tasks/{task_id}")
+    assert task_after.status_code == 200
+    assert task_after.json()["title"] == original_title
+    assert task_after.json()["priority"] == "High"
+
+
+def test_patch_explicit_null_assignee_clears_it_returns_200(client):
+    create_response = client.post("/tasks", json={"title": "assigned task", "assignee": "alice"})
+    assert create_response.status_code == 201
+    task_id = create_response.json()["id"]
+
+    response = client.patch(f"/tasks/{task_id}", json={"assignee": None})
+
+    assert response.status_code == 200
+    assert response.json()["assignee"] is None
+
+
+def test_patch_explicit_null_due_date_clears_it_returns_200(client):
+    create_response = client.post("/tasks", json={"title": "due task", "due_date": "2026-09-01"})
+    assert create_response.status_code == 201
+    task_id = create_response.json()["id"]
+
+    response = client.patch(f"/tasks/{task_id}", json={"due_date": None})
+
+    assert response.status_code == 200
+    assert response.json()["due_date"] is None
+
+
 def test_delete_existing_returns_204_no_body(client, created_task):
     task_id = created_task["id"]
 
